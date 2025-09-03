@@ -101,88 +101,29 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, userData: any) => {
     try {
-      // Handle file uploads for doctors first
-      let verificationDocs: string[] = []
-      if (userData.role === 'DOCTOR' && userData.verificationDocs) {
-        for (const file of userData.verificationDocs) {
-          const fileExt = file.name.split('.').pop()
-          const fileName = `verification/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
-          
-          const { data: uploadData, error: uploadError } = await supabase.storage
-            .from('medical-records')
-            .upload(fileName, file)
-
-          if (uploadError) {
-            console.error('File upload error:', uploadError)
-          } else {
-            verificationDocs.push(uploadData.path)
-          }
-        }
-      }
-
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name: userData.name,
-            role: userData.role,
-            phone: userData.phone,
-            verification_docs: verificationDocs.length > 0 ? verificationDocs : undefined
-          }
-        }
+      // Use the API route for consistent signup handling
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+          ...userData
+        })
       })
 
-      if (error) {
-        return { error: error.message }
-      }
+      const result = await response.json()
 
-      // If user is created, create additional profile data
-      if (data.user && userData.role === 'PATIENT') {
-        // Create patient profile
-        const { error: patientError } = await supabase
-          .from('patients')
-          .insert({
-            user_id: data.user.id,
-            date_of_birth: userData.dateOfBirth ? new Date(userData.dateOfBirth).toISOString().split('T')[0] : null,
-            gender: userData.gender,
-            blood_type: userData.bloodType,
-            allergies: userData.allergies,
-            medications: userData.medications,
-            emergency_contact: userData.emergencyContact,
-            emergency_phone: userData.emergencyPhone,
-          })
-
-        if (patientError) {
-          console.error('Error creating patient profile:', patientError)
-        }
-      }
-
-      // If user is created, create doctor profile
-      if (data.user && userData.role === 'DOCTOR') {
-        const { error: doctorError } = await supabase
-          .from('doctors')
-          .insert({
-            user_id: data.user.id,
-            specialty: userData.specialty,
-            qualifications: userData.qualifications ? JSON.stringify(userData.qualifications.split(",").map((q: string) => q.trim())) : null,
-            experience: parseInt(userData.experience) || 0,
-            license_number: userData.licenseNumber,
-            license_expiry: new Date(userData.licenseExpiry).toISOString().split('T')[0],
-            bio: userData.bio,
-            consultation_fee: parseFloat(userData.consultationFee) || 0,
-            location: userData.location,
-            languages: userData.languages ? JSON.stringify(userData.languages.split(",").map((l: string) => l.trim())) : null
-          })
-
-        if (doctorError) {
-          console.error('Error creating doctor profile:', doctorError)
-        }
+      if (!response.ok) {
+        return { error: result.error || 'Registration failed' }
       }
 
       return {}
     } catch (error: any) {
-      return { error: error.message }
+      console.error('Signup error:', error)
+      return { error: 'Database error saving new user' }
     }
   }
 

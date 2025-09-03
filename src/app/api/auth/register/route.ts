@@ -37,8 +37,9 @@ export async function POST(request: NextRequest) {
     })
 
     if (authError) {
+      console.error("Auth error details:", authError)
       return NextResponse.json(
-        { error: authError.message },
+        { error: "Database error creating new user", details: authError.message },
         { status: 400 }
       )
     }
@@ -49,6 +50,9 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+
+    // Wait a moment for the trigger to create the profile
+    await new Promise(resolve => setTimeout(resolve, 1000))
 
     // If patient, create patient profile
     if (role === 'PATIENT') {
@@ -67,7 +71,10 @@ export async function POST(request: NextRequest) {
 
       if (patientError) {
         console.error("Error creating patient profile:", patientError)
-        // Don't fail the registration, profile creation is handled by trigger
+        return NextResponse.json(
+          { error: "Database error saving new user" },
+          { status: 500 }
+        )
       }
     }
 
@@ -81,7 +88,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("Registration error:", error)
     return NextResponse.json(
-      { error: "An error occurred during registration" },
+      { error: "Database error creating new user", details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }
