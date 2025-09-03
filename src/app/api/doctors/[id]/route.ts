@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { createClient } from "@/lib/supabase"
 
 export async function GET(
   request: NextRequest,
@@ -8,47 +8,47 @@ export async function GET(
   try {
     const doctorId = params.id
 
-    const doctor = await db.doctor.findFirst({
-      where: {
-        userId: doctorId,
-        user: {
-          accountStatus: "active",
-          verificationStatus: "VERIFIED"
-        }
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            avatar: true
-          }
-        }
-      }
-    })
+    const supabase = createClient()
 
-    if (!doctor) {
+    const { data: doctor, error } = await supabase
+      .from('doctors')
+      .select(`
+        *,
+        profiles:user_id (
+          id,
+          name,
+          email,
+          phone,
+          avatar,
+          verification_status,
+          account_status
+        )
+      `)
+      .eq('user_id', doctorId)
+      .eq('profiles.account_status', 'active')
+      .eq('profiles.verification_status', 'VERIFIED')
+      .single()
+
+    if (error || !doctor) {
       return NextResponse.json({ error: "Doctor not found" }, { status: 404 })
     }
 
     const transformedDoctor = {
-      id: doctor.user.id,
-      name: doctor.user.name,
-      email: doctor.user.email,
-      phone: doctor.user.phone,
-      avatar: doctor.user.avatar,
+      id: doctor.profiles?.id,
+      name: doctor.profiles?.name,
+      email: doctor.profiles?.email,
+      phone: doctor.profiles?.phone,
+      avatar: doctor.profiles?.avatar,
       specialty: doctor.specialty,
       qualifications: doctor.qualifications ? JSON.parse(doctor.qualifications) : [],
       experience: doctor.experience,
       bio: doctor.bio,
-      consultationFee: doctor.consultationFee,
+      consultationFee: doctor.consultation_fee,
       location: doctor.location,
       languages: doctor.languages ? JSON.parse(doctor.languages) : [],
       rating: doctor.rating,
-      totalConsultations: doctor.totalConsultations,
-      isAvailable: doctor.isAvailable
+      totalConsultations: doctor.total_consultations,
+      isAvailable: doctor.is_available
     }
 
     return NextResponse.json({ doctor: transformedDoctor })

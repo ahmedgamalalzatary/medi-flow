@@ -1,6 +1,6 @@
 "use client"
 
-import { useSession } from "next-auth/react"
+import { useAuth } from "@/hooks/use-auth"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useState, useEffect } from "react"
 import { Navbar } from "@/components/layout/navbar"
@@ -55,7 +55,7 @@ interface Availability {
 }
 
 export default function BookAppointment() {
-  const { data: session, status } = useSession()
+  const { user, profile, loading: authLoading } = useAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
   const doctorId = searchParams.get("doctorId")
@@ -79,7 +79,7 @@ export default function BookAppointment() {
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!authLoading && !user) {
       router.push("/auth/signin")
       return
     }

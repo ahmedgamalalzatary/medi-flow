@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { createClient } from "@/lib/supabase"
 
 export async function GET(
   request: NextRequest,
@@ -8,16 +8,19 @@ export async function GET(
   try {
     const doctorId = params.id
 
-    const availability = await db.availability.findMany({
-      where: {
-        doctorId
-      },
-      orderBy: {
-        dayOfWeek: "asc"
-      }
-    })
+    const supabase = createClient()
 
-    return NextResponse.json({ availability })
+    const { data: availability, error } = await supabase
+      .from('availabilities')
+      .select('*')
+      .eq('doctor_id', doctorId)
+      .order('day_of_week', { ascending: true })
+
+    if (error) {
+      throw error
+    }
+
+    return NextResponse.json({ availability: availability || [] })
   } catch (error) {
     console.error("Error fetching doctor availability:", error)
     return NextResponse.json(

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -31,6 +32,7 @@ export default function SignUp() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const router = useRouter()
+  const { signUp } = useAuth()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -58,26 +60,18 @@ export default function SignUp() {
     }
 
     try {
-      const response = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          ...formData,
-          role: "PATIENT"
-        })
+      const result = await signUp(formData.email, formData.password, {
+        ...formData,
+        role: "PATIENT"
       })
 
-      const data = await response.json()
-
-      if (response.ok) {
-        setSuccess("Account created successfully! You can now sign in.")
+      if (result.error) {
+        setError(result.error)
+      } else {
+        setSuccess("Account created successfully! Please check your email to verify your account.")
         setTimeout(() => {
           router.push("/auth/signin")
-        }, 2000)
-      } else {
-        setError(data.error || "An error occurred. Please try again.")
+        }, 3000)
       }
     } catch (error) {
       setError("An error occurred. Please try again.")

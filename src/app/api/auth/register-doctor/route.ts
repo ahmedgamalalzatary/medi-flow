@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
-import bcrypt from "bcryptjs"
-import { writeFile } from "fs/promises"
-import path from "path"
-import { db } from "@/lib/db"
-import { UserRole } from "@prisma/client"
+import { createAdminClient } from "@/lib/supabase"
+import { Database } from "@/types/database"
+
+type UserRole = Database['public']['Enums']['user_role']
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,85 +23,85 @@ export async function POST(request: NextRequest) {
     const languages = formData.get("languages") as string
     const role = formData.get("role") as string
 
-    // Check if user already exists
-    const existingUser = await db.user.findUnique({
-      where: { email }
+    const supabase = createAdminClient()
+
+    // Handle file uploads to Supabase Storage
+    const verificationDocs: string[] = []
+    const files = formData.getAll("verificationDocs") as File[]
+    
+    for (const file of files) {
+      if (file instanceof File) {
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
+        const filePath = `verification/${fileName}`
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('medical-records')
+          .upload(filePath, file)
+
+        if (uploadError) {
+          console.error("File upload error:", uploadError)
+        } else {
+          verificationDocs.push(uploadData.path)
+        }
+      }
+    }
+
+    // Create user with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: false, // Doctors need email verification
+      user_metadata: {
+        name,
+        role: 'DOCTOR' as UserRole,
+        phone,
+        verification_docs: verificationDocs
+      }
     })
 
-    if (existingUser) {
+    if (authError) {
       return NextResponse.json(
-        { error: "User with this email already exists" },
+        { error: authError.message },
         { status: 400 }
       )
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(password, 12)
-
-    // Handle file uploads
-    const verificationDocs: string[] = []
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "verification")
-    
-    try {
-      // Create upload directory if it doesn't exist
-      await import("fs").then(fs => {
-        if (!fs.existsSync(uploadDir)) {
-          fs.mkdirSync(uploadDir, { recursive: true })
-        }
-      })
-    } catch (error) {
-      console.error("Error creating upload directory:", error)
+    if (!authData.user) {
+      return NextResponse.json(
+        { error: "Failed to create user" },
+        { status: 500 }
+      )
     }
-
-    // Process uploaded files
-    const files = formData.getAll("verificationDocs") as File[]
-    for (const file of files) {
-      if (file instanceof File) {
-        const bytes = await file.arrayBuffer()
-        const buffer = Buffer.from(bytes)
-        
-        const filename = `${Date.now()}-${file.name}`
-        const filepath = path.join(uploadDir, filename)
-        
-        await writeFile(filepath, buffer)
-        verificationDocs.push(`/uploads/verification/${filename}`)
-      }
-    }
-
-    // Create user
-    const user = await db.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        phone,
-        role: role as UserRole,
-        isVerified: false, // Doctors need verification
-        verificationStatus: "PENDING",
-        verificationDocs: JSON.stringify(verificationDocs)
-      }
-    })
 
     // Create doctor profile
-    await db.doctor.create({
-      data: {
-        userId: user.id,
+    const { error: doctorError } = await supabase
+      .from('doctors')
+      .insert({
+        user_id: authData.user.id,
         specialty,
         qualifications: qualifications ? JSON.stringify(qualifications.split(",").map(q => q.trim())) : null,
         experience: parseInt(experience) || 0,
-        licenseNumber,
-        licenseExpiry: new Date(licenseExpiry),
+        license_number: licenseNumber,
+        license_expiry: new Date(licenseExpiry).toISOString().split('T')[0],
         bio,
-        consultationFee: parseFloat(consultationFee) || 0,
+        consultation_fee: parseFloat(consultationFee) || 0,
         location,
         languages: languages ? JSON.stringify(languages.split(",").map(l => l.trim())) : null
-      }
-    })
+      })
+
+    if (doctorError) {
+      console.error("Error creating doctor profile:", doctorError)
+      return NextResponse.json(
+        { error: "Failed to create doctor profile" },
+        { status: 500 }
+      )
+    }
 
     return NextResponse.json(
       { 
         message: "Doctor registration submitted successfully. Awaiting verification.",
-        userId: user.id 
+        userId: authData.user.id 
       },
       { status: 201 }
     )

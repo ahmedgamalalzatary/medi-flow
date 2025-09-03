@@ -1,6 +1,6 @@
 "use client"
 
-import { useSession, signOut } from "next-auth/react"
+import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -20,10 +20,11 @@ interface NavbarProps {
 }
 
 export function Navbar({ currentRole, onRoleSwitch }: NavbarProps) {
-  const { data: session } = useSession()
+  const { user, profile, signOut } = useAuth()
 
-  const handleSignOut = () => {
-    signOut({ callbackUrl: "/" })
+  const handleSignOut = async () => {
+    await signOut()
+    window.location.href = "/"
   }
 
   return (
@@ -80,14 +81,14 @@ export function Navbar({ currentRole, onRoleSwitch }: NavbarProps) {
         </div>
 
         <div className="flex items-center space-x-4">
-          {session?.user && (
+          {user && profile && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={session.user.avatar} alt={session.user.name} />
+                    <AvatarImage src={profile.avatar || undefined} alt={profile.name} />
                     <AvatarFallback>
-                      {session.user.name?.charAt(0).toUpperCase()}
+                      {profile.name?.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -95,31 +96,18 @@ export function Navbar({ currentRole, onRoleSwitch }: NavbarProps) {
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{session.user.name}</p>
+                    <p className="text-sm font-medium leading-none">{profile.name}</p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {session.user.email}
+                      {profile.email}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {session.user.role}
+                      {profile.role}
                     </p>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 
-                {/* Role switching for users with both roles */}
-                {session.user.patientProfile && session.user.doctorProfile && (
-                  <>
-                    <DropdownMenuItem onClick={() => onRoleSwitch?.("patient")}>
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Patient View</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onRoleSwitch?.("doctor")}>
-                      <Stethoscope className="mr-2 h-4 w-4" />
-                      <span>Doctor View</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                  </>
-                )}
+                {/* Role switching for users with both roles - TODO: implement multi-role support */}
                 
                 <DropdownMenuItem asChild>
                   <Link href="/dashboard/profile">

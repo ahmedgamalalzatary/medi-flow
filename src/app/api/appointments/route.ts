@@ -1,69 +1,79 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
-import { db } from "@/lib/db"
+import { createServerSupabaseClient } from "@/lib/supabase"
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = createServerSupabaseClient()
     
-    if (!session) {
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    // Get user profile to check role
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: "User profile not found" }, { status: 404 })
     }
 
     const { searchParams } = new URL(request.url)
     const status = searchParams.get("status")
 
-    const where: any = {}
+    // Build query based on user role
+    let query = supabase
+      .from('appointments')
+      .select(`
+        *,
+        patient:patient_id (
+          id,
+          name,
+          email,
+          phone,
+          avatar
+        ),
+        doctor:doctor_id (
+          id,
+          name,
+          email,
+          phone,
+          avatar
+        ),
+        payments (
+          id,
+          amount,
+          status
+        )
+      `)
     
     // Filter by user role
-    if (session.user.role === "PATIENT") {
-      where.patientId = session.user.id
-    } else if (session.user.role === "DOCTOR") {
-      where.doctorId = session.user.id
+    if (profile.role === "PATIENT") {
+      query = query.eq('patient_id', user.id)
+    } else if (profile.role === "DOCTOR") {
+      query = query.eq('doctor_id', user.id)
     }
 
     // Filter by status if provided
     if (status && status !== "all") {
-      where.status = status
+      query = query.eq('status', status)
     }
 
-    const appointments = await db.appointment.findMany({
-      where,
-      include: {
-        patient: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            avatar: true
-          }
-        },
-        doctor: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            avatar: true,
-            specialty: true
-          }
-        },
-        payment: {
-          select: {
-            id: true,
-            amount: true,
-            status: true
-          }
-        }
-      },
-      orderBy: {
-        scheduledAt: "asc"
-      }
-    })
+    // Order by scheduled time
+    query = query.order('scheduled_at', { ascending: true })
 
-    return NextResponse.json({ appointments })
+    const { data: appointments, error } = await query
+
+    if (error) {
+      throw error
+    }
+
+    return NextResponse.json({ appointments: appointments || [] })
   } catch (error) {
     console.error("Error fetching appointments:", error)
     return NextResponse.json(
@@ -75,13 +85,27 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = createServerSupabaseClient()
     
-    if (!session) {
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    if (session.user.role !== "PATIENT") {
+    // Get user profile to check role
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profileError || !profile) {
+      return NextResponse.json({ error: "User profile not found" }, { status: 404 })
+    }
+
+    if (profile.role !== "PATIENT") {
       return NextResponse.json({ error: "Only patients can create appointments" }, { status: 403 })
     }
 
@@ -103,19 +127,17 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if patient has reached the maximum number of different doctors (5)
-    const existingAppointments = await db.appointment.findMany({
-      where: {
-        patientId: session.user.id,
-        status: {
-          in: ["REQUESTED", "ACCEPTED", "RESCHEDULED"]
-        }
-      },
-      select: {
-        doctorId: true
-      }
-    })
+    const { data: existingAppointments, error: existingError } = await supabase
+      .from('appointments')
+      .select('doctor_id')
+      .eq('patient_id', user.id)
+      .in('status', ['REQUESTED', 'ACCEPTED', 'RESCHEDULED'])
 
-    const uniqueDoctors = new Set(existingAppointments.map(appt => appt.doctorId))
+    if (existingError) {
+      throw existingError
+    }
+
+    const uniqueDoctors = new Set(existingAppointments?.map(appt => appt.doctor_id) || [])
     if (uniqueDoctors.size >= 5 && !uniqueDoctors.has(doctorId)) {
       return NextResponse.json(
         { error: "You can only have appointments with a maximum of 5 different doctors simultaneously" },
@@ -124,51 +146,54 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if the time slot is available (simplified check)
-    const existingAppointment = await db.appointment.findFirst({
-      where: {
-        doctorId,
-        scheduledAt: new Date(scheduledAt),
-        status: {
-          in: ["REQUESTED", "ACCEPTED", "RESCHEDULED"]
-        }
-      }
-    })
+    const { data: existingAppointment, error: slotError } = await supabase
+      .from('appointments')
+      .select('id')
+      .eq('doctor_id', doctorId)
+      .eq('scheduled_at', new Date(scheduledAt).toISOString())
+      .in('status', ['REQUESTED', 'ACCEPTED', 'RESCHEDULED'])
+      .single()
+
+    if (slotError && slotError.code !== 'PGRST116') { // PGRST116 = no rows found
+      throw slotError
+    }
 
     if (existingAppointment) {
       return NextResponse.json({ error: "This time slot is already booked" }, { status: 400 })
     }
 
     // Create appointment
-    const appointment = await db.appointment.create({
-      data: {
-        patientId: session.user.id,
-        doctorId,
-        scheduledAt: new Date(scheduledAt),
+    const { data: appointment, error: createError } = await supabase
+      .from('appointments')
+      .insert({
+        patient_id: user.id,
+        doctor_id: doctorId,
+        scheduled_at: new Date(scheduledAt).toISOString(),
         type,
         duration,
         illness,
-        specificNeeds,
+        specific_needs: specificNeeds,
         questions,
         price
-      },
-      include: {
-        patient: {
-          select: {
-            id: true,
-            name: true,
-            email: true
-          }
-        },
-        doctor: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            specialty: true
-          }
-        }
-      }
-    })
+      })
+      .select(`
+        *,
+        patient:patient_id (
+          id,
+          name,
+          email
+        ),
+        doctor:doctor_id (
+          id,
+          name,
+          email
+        )
+      `)
+      .single()
+
+    if (createError) {
+      throw createError
+    }
 
     return NextResponse.json(
       { 

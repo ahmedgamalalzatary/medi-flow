@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { signIn, useSession } from "next-auth/react"
+import { useAuth } from "@/hooks/use-auth"
 import { useRouter, useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -19,15 +19,15 @@ export default function SignIn() {
   const [error, setError] = useState("")
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { data: session, status } = useSession()
+  const { user, loading, signIn } = useAuth()
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (status === "authenticated") {
+    if (user && !loading) {
       router.push(callbackUrl)
     }
-  }, [status, session, router, callbackUrl])
+  }, [user, loading, router, callbackUrl])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -35,20 +35,12 @@ export default function SignIn() {
     setError("")
 
     try {
-      const result = await signIn("credentials", {
-        email,
-        password,
-        redirect: false,
-        callbackUrl
-      })
+      const result = await signIn(email, password)
 
-      if (result?.error) {
+      if (result.error) {
         setError(result.error)
-      } else if (result?.url) {
-        // Let NextAuth handle the redirect
-        router.push(result.url)
       } else {
-        // Fallback redirect
+        // Successful sign in - redirect will happen automatically via useEffect
         router.push(callbackUrl)
       }
     } catch (error) {
@@ -59,7 +51,7 @@ export default function SignIn() {
   }
 
   // Show loading while checking session
-  if (status === "loading") {
+  if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white flex items-center justify-center p-4">
         <div className="text-center">

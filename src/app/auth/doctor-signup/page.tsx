@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/hooks/use-auth"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -35,6 +36,7 @@ export default function DoctorSignUp() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const router = useRouter()
+  const { signUp } = useAuth()
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
@@ -74,30 +76,19 @@ export default function DoctorSignUp() {
     }
 
     try {
-      // Create FormData for file upload
-      const submitData = new FormData()
-      Object.keys(formData).forEach(key => {
-        submitData.append(key, formData[key as keyof typeof formData])
-      })
-      submitData.append("role", "DOCTOR")
-      verificationDocs.forEach((file, index) => {
-        submitData.append(`verificationDoc${index}`, file)
+      const result = await signUp(formData.email, formData.password, {
+        ...formData,
+        role: "DOCTOR",
+        verificationDocs: verificationDocs
       })
 
-      const response = await fetch("/api/auth/register-doctor", {
-        method: "POST",
-        body: submitData
-      })
-
-      const data = await response.json()
-
-      if (response.ok) {
+      if (result.error) {
+        setError(result.error)
+      } else {
         setSuccess("Account created successfully! Your application is under review. You will receive an email once verified.")
         setTimeout(() => {
           router.push("/auth/signin")
         }, 3000)
-      } else {
-        setError(data.error || "An error occurred. Please try again.")
       }
     } catch (error) {
       setError("An error occurred. Please try again.")

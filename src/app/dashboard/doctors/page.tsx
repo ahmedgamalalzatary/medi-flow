@@ -1,6 +1,6 @@
 "use client"
 
-import { useSession } from "next-auth/react"
+import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { Navbar } from "@/components/layout/navbar"
@@ -53,7 +53,7 @@ interface SearchFilters {
 }
 
 export default function Doctors() {
-  const { data: session, status } = useSession()
+  const { user, profile, loading: authLoading } = useAuth()
   const router = useRouter()
   const [currentRole, setCurrentRole] = useState<"patient" | "doctor">("patient")
   const [doctors, setDoctors] = useState<Doctor[]>([])

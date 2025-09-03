@@ -1,6 +1,6 @@
 "use client"
 
-import { useSession } from "next-auth/react"
+import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { Navbar } from "@/components/layout/navbar"
@@ -20,34 +20,34 @@ import {
 } from "lucide-react"
 
 export default function Dashboard() {
-  const { data: session, status } = useSession()
+  const { user, profile, loading: authLoading } = useAuth()
   const router = useRouter()
   const [currentRole, setCurrentRole] = useState<"patient" | "doctor">("patient")
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!authLoading && !user) {
       router.push("/auth/signin")
       return
     }
 
-    if (status === "authenticated") {
+    if (!authLoading && user && profile) {
       setLoading(false)
       
       // Set default role based on user's primary role
-      if (session?.user?.role === "DOCTOR") {
+      if (profile.role === "DOCTOR") {
         setCurrentRole("doctor")
       } else {
         setCurrentRole("patient")
       }
     }
-  }, [status, session, router])
+  }, [authLoading, user, profile, router])
 
   const handleRoleSwitch = (role: "patient" | "doctor") => {
     setCurrentRole(role)
   }
 
-  if (loading || status === "loading") {
+  if (loading || authLoading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
@@ -58,12 +58,12 @@ export default function Dashboard() {
     )
   }
 
-  if (!session) {
+  if (!user || !profile) {
     return null
   }
 
   // Show verification warning for doctors
-  if (session.user.role === "DOCTOR" && session.user.verificationStatus !== "VERIFIED") {
+  if (profile.role === "DOCTOR" && profile.verification_status !== "VERIFIED") {
     return (
       <div className="min-h-screen bg-gray-50">
         <Navbar currentRole={currentRole} onRoleSwitch={handleRoleSwitch} />
@@ -95,7 +95,7 @@ export default function Dashboard() {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            Welcome back, {session.user.name}!
+            Welcome back, {profile.name}!
           </h1>
           <p className="text-gray-600">
             {currentRole === "patient" 

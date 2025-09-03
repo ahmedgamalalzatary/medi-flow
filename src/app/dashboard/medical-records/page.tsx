@@ -1,6 +1,6 @@
 "use client"
 
-import { useSession } from "next-auth/react"
+import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
 import { Navbar } from "@/components/layout/navbar"
@@ -37,7 +37,7 @@ interface MedicalRecord {
 }
 
 export default function MedicalRecords() {
-  const { data: session, status } = useSession()
+  const { user, profile, loading: authLoading } = useAuth()
   const router = useRouter()
   const [currentRole, setCurrentRole] = useState<"patient" | "doctor">("patient")
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([])
@@ -54,7 +54,7 @@ export default function MedicalRecords() {
   })
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!authLoading && !user) {
       router.push("/auth/signin")
       return
     }

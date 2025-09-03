@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { db } from "@/lib/db"
+import { createClient } from "@/lib/supabase"
 
 export async function GET(request: NextRequest) {
   try {
@@ -11,104 +11,84 @@ export async function GET(request: NextRequest) {
     const maxFee = parseFloat(searchParams.get("maxFee") || "1000")
     const availability = searchParams.get("availability") === "true"
 
-    // Build where clause
-    const where: any = {
-      user: {
-        accountStatus: "active",
-        verificationStatus: "VERIFIED"
-      }
-    }
+    const supabase = createClient()
 
+    // Build query
+    let query = supabase
+      .from('doctors')
+      .select(`
+        *,
+        profiles:user_id (
+          id,
+          name,
+          email,
+          phone,
+          avatar,
+          account_status,
+          verification_status
+        )
+      `)
+      .eq('profiles.account_status', 'active')
+      .eq('profiles.verification_status', 'VERIFIED')
+
+    // Apply filters
     if (specialty) {
-      where.specialty = specialty
+      query = query.eq('specialty', specialty)
     }
 
     if (location) {
-      where.location = {
-        contains: location,
-        mode: "insensitive"
-      }
+      query = query.ilike('location', `%${location}%`)
     }
 
     if (minRating > 0) {
-      where.rating = {
-        gte: minRating
-      }
+      query = query.gte('rating', minRating)
     }
 
     if (maxFee < 1000) {
-      where.consultationFee = {
-        lte: maxFee
-      }
+      query = query.lte('consultation_fee', maxFee)
     }
 
     if (availability) {
-      where.isAvailable = true
+      query = query.eq('is_available', true)
     }
 
-    // If search term is provided, search in multiple fields
+    // Apply search across multiple fields
     if (search) {
-      where.OR = [
-        {
-          user: {
-            name: {
-              contains: search,
-              mode: "insensitive"
-            }
-          }
-        },
-        {
-          specialty: {
-            contains: search,
-            mode: "insensitive"
-          }
-        },
-        {
-          bio: {
-            contains: search,
-            mode: "insensitive"
-          }
-        }
-      ]
+      query = query.or(`
+        profiles.name.ilike.%${search}%,
+        specialty.ilike.%${search}%,
+        bio.ilike.%${search}%
+      `)
     }
 
-    const doctors = await db.doctor.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            avatar: true
-          }
-        }
-      },
-      orderBy: [
-        { rating: "desc" },
-        { totalConsultations: "desc" }
-      ]
-    })
+    // Order by rating and consultations
+    query = query.order('rating', { ascending: false })
+    query = query.order('total_consultations', { ascending: false })
+
+    const { data: doctors, error } = await query
+
+    if (error) {
+      throw error
+    }
 
     // Transform the data to include user fields
-    const transformedDoctors = doctors.map(doctor => ({
-      id: doctor.user.id,
-      name: doctor.user.name,
-      email: doctor.user.email,
-      phone: doctor.user.phone,
-      avatar: doctor.user.avatar,
+    const transformedDoctors = doctors?.map(doctor => ({
+      id: doctor.profiles?.id,
+      name: doctor.profiles?.name,
+      email: doctor.profiles?.email,
+      phone: doctor.profiles?.phone,
+      avatar: doctor.profiles?.avatar,
       specialty: doctor.specialty,
       qualifications: doctor.qualifications ? JSON.parse(doctor.qualifications) : [],
       experience: doctor.experience,
       bio: doctor.bio,
-      consultationFee: doctor.consultationFee,
+      consultationFee: doctor.consultation_fee,
       location: doctor.location,
       languages: doctor.languages ? JSON.parse(doctor.languages) : [],
       rating: doctor.rating,
-      totalConsultations: doctor.totalConsultations,
-      isAvailable: doctor.isAvailable
-    }))
+      totalConsultations: doctor.total_consultations,
+      isAvailable: doctor.is_available
+    })) || []
 
     return NextResponse.json({ doctors: transformedDoctors })
   } catch (error) {

@@ -1,28 +1,28 @@
 import { NextRequest, NextResponse } from "next/server"
-import { getServerSession } from "next-auth"
-import { authOptions } from "@/lib/auth"
-import { writeFile } from "fs/promises"
-import path from "path"
-import { db } from "@/lib/db"
+import { createServerSupabaseClient } from "@/lib/supabase"
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = createServerSupabaseClient()
     
-    if (!session) {
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    const records = await db.medicalRecord.findMany({
-      where: {
-        patientId: session.user.id
-      },
-      orderBy: {
-        createdAt: "desc"
-      }
-    })
+    const { data: records, error } = await supabase
+      .from('medical_records')
+      .select('*')
+      .eq('patient_id', user.id)
+      .order('created_at', { ascending: false })
 
-    return NextResponse.json({ records })
+    if (error) {
+      throw error
+    }
+
+    return NextResponse.json({ records: records || [] })
   } catch (error) {
     console.error("Error fetching medical records:", error)
     return NextResponse.json(
@@ -34,9 +34,12 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions)
+    const supabase = createServerSupabaseClient()
     
-    if (!session) {
+    // Get current user
+    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    
+    if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
@@ -49,47 +52,46 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 })
     }
 
-    // Handle file uploads
+    // Handle file uploads to Supabase Storage
     const documents: string[] = []
-    const uploadDir = path.join(process.cwd(), "public", "uploads", "medical-records")
     
-    try {
-      await import("fs").then(fs => {
-        if (!fs.existsSync(uploadDir)) {
-          fs.mkdirSync(uploadDir, { recursive: true })
-        }
-      })
-    } catch (error) {
-      console.error("Error creating upload directory:", error)
-    }
-
     // Process uploaded files
     let fileIndex = 0
     while (formData.get(`document${fileIndex}`)) {
       const file = formData.get(`document${fileIndex}`) as File
       if (file instanceof File) {
-        const bytes = await file.arrayBuffer()
-        const buffer = Buffer.from(bytes)
+        const fileExt = file.name.split('.').pop()
+        const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).substring(2)}.${fileExt}`
         
-        const filename = `${Date.now()}-${file.name}`
-        const filepath = path.join(uploadDir, filename)
-        
-        await writeFile(filepath, buffer)
-        documents.push(`/uploads/medical-records/${filename}`)
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from('medical-records')
+          .upload(fileName, file)
+
+        if (uploadError) {
+          console.error("File upload error:", uploadError)
+        } else {
+          documents.push(uploadData.path)
+        }
       }
       fileIndex++
     }
 
     // Create medical record
-    const record = await db.medicalRecord.create({
-      data: {
-        patientId: session.user.id,
+    const { data: record, error: createError } = await supabase
+      .from('medical_records')
+      .insert({
+        patient_id: user.id,
         title,
         description: description || null,
         folder: folder || null,
         documents: documents.length > 0 ? JSON.stringify(documents) : null
-      }
-    })
+      })
+      .select()
+      .single()
+
+    if (createError) {
+      throw createError
+    }
 
     return NextResponse.json(
       { 
