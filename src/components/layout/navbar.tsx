@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Heart, User, Settings, LogOut, Stethoscope, Calendar, MessageSquare, FileText } from "lucide-react"
+import { NotificationBell } from "@/components/notifications/notification-center"
 
 interface NavbarProps {
   currentRole?: "patient" | "doctor"
@@ -82,7 +83,9 @@ export function Navbar({ currentRole, onRoleSwitch }: NavbarProps) {
 
         <div className="flex items-center space-x-4">
           {user && profile && (
-            <DropdownMenu>
+            <>
+              <NotificationBell />
+              <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
@@ -121,6 +124,7 @@ export function Navbar({ currentRole, onRoleSwitch }: NavbarProps) {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </>
           )}
         </div>
       </div>
