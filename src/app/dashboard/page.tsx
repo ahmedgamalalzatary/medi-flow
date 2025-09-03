@@ -78,7 +78,7 @@ export default function Dashboard() {
                   This process typically takes 12-48 hours.
                 </p>
                 <p className="text-sm text-gray-600">
-                  Verification Status: {session.user.verificationStatus}
+                  Verification Status: {profile.verification_status}
                 </p>
               </div>
             </AlertDescription>

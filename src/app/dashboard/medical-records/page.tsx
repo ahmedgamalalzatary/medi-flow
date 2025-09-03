@@ -59,14 +59,14 @@ export default function MedicalRecords() {
       return
     }
 
-    if (status === "authenticated") {
+    if (!authLoading && user && profile) {
       setLoading(false)
-      if (session?.user?.role === "DOCTOR") {
+      if (profile.role === "DOCTOR") {
         setCurrentRole("doctor")
       }
       fetchMedicalRecords()
     }
-  }, [status, session, router])
+  }, [authLoading, user, profile, router])
 
   const fetchMedicalRecords = async () => {
     try {
@@ -153,7 +153,7 @@ export default function MedicalRecords() {
     )
   }
 
-  if (!session) {
+  if (!user || !profile) {
     return null
   }
 

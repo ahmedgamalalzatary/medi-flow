@@ -70,19 +70,19 @@ export default function Doctors() {
   const [isFilterDialogOpen, setIsFilterDialogOpen] = useState(false)
 
   useEffect(() => {
-    if (status === "unauthenticated") {
+    if (!authLoading && !user) {
       router.push("/auth/signin")
       return
     }
 
-    if (status === "authenticated") {
+    if (!authLoading && user && profile) {
       setLoading(false)
-      if (session?.user?.role === "DOCTOR") {
+      if (profile.role === "DOCTOR") {
         setCurrentRole("doctor")
       }
       fetchDoctors()
     }
-  }, [status, session, router])
+  }, [authLoading, user, profile, router])
 
   const fetchDoctors = async () => {
     try {
@@ -144,7 +144,7 @@ export default function Doctors() {
     )
   }
 
-  if (!session) {
+  if (!user || !profile) {
     return null
   }
 

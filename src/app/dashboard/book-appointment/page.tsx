@@ -84,9 +84,9 @@ export default function BookAppointment() {
       return
     }
 
-    if (status === "authenticated") {
+    if (!authLoading && user && profile) {
       setLoading(false)
-      if (session?.user?.role === "DOCTOR") {
+      if (profile.role === "DOCTOR") {
         setCurrentRole("doctor")
       }
       
@@ -94,7 +94,7 @@ export default function BookAppointment() {
         fetchDoctor(doctorId)
       }
     }
-  }, [status, session, router, doctorId])
+  }, [authLoading, user, profile, router, doctorId])
 
   const fetchDoctor = async (id: string) => {
     try {
@@ -258,7 +258,7 @@ export default function BookAppointment() {
     )
   }
 
-  if (!session || !doctor) {
+  if (!user || !profile || !doctor) {
     return null
   }
 
