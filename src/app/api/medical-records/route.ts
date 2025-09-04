@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase"
+import { createAdminClient } from "@/lib/supabase"
 
 export async function GET(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = createAdminClient()
     
-    // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get session from authorization header
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: "Unauthorized - No token provided" }, { status: 401 })
+    }
+    
+    const token = authHeader.split(' ')[1]
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
+    // Use admin client to bypass RLS and manually filter by patient_id
     const { data: records, error } = await supabase
       .from('medical_records')
       .select('*')
@@ -34,10 +41,16 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient()
+    const supabase = createAdminClient()
     
-    // Get current user
-    const { data: { user }, error: authError } = await supabase.auth.getUser()
+    // Get session from authorization header
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json({ error: "Unauthorized - No token provided" }, { status: 401 })
+    }
+    
+    const token = authHeader.split(' ')[1]
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
     
     if (authError || !user) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -76,7 +89,7 @@ export async function POST(request: NextRequest) {
       fileIndex++
     }
 
-    // Create medical record
+    // Create medical record using admin client (bypasses RLS)
     const { data: record, error: createError } = await supabase
       .from('medical_records')
       .insert({

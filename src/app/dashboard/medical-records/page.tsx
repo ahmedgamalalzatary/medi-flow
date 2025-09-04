@@ -3,6 +3,7 @@
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase"
 import { Navbar } from "@/components/layout/navbar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -39,6 +40,7 @@ interface MedicalRecord {
 export default function MedicalRecords() {
   const { user, profile, loading: authLoading } = useAuth()
   const router = useRouter()
+  const supabase = createClient()
   const [currentRole, setCurrentRole] = useState<"patient" | "doctor">("patient")
   const [medicalRecords, setMedicalRecords] = useState<MedicalRecord[]>([])
   const [loading, setLoading] = useState(true)
@@ -70,10 +72,25 @@ export default function MedicalRecords() {
 
   const fetchMedicalRecords = async () => {
     try {
-      const response = await fetch("/api/medical-records")
+      // Get the session token from Supabase
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        setError("Please sign in to view medical records")
+        return
+      }
+
+      const response = await fetch("/api/medical-records", {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
+      
       if (response.ok) {
         const data = await response.json()
         setMedicalRecords(data.records || [])
+      } else {
+        const errorData = await response.json()
+        setError(errorData.error || "Failed to load medical records")
       }
     } catch (error) {
       console.error("Error fetching medical records:", error)
@@ -99,6 +116,13 @@ export default function MedicalRecords() {
     }
 
     try {
+      // Get the session token from Supabase
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) {
+        setError("Please sign in to create medical records")
+        return
+      }
+
       const formData = new FormData()
       formData.append("title", newRecord.title)
       formData.append("description", newRecord.description)
@@ -110,6 +134,9 @@ export default function MedicalRecords() {
 
       const response = await fetch("/api/medical-records", {
         method: "POST",
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        },
         body: formData
       })
 
