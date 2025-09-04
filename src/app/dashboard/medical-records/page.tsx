@@ -13,18 +13,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
-import { 
-  FileText, 
-  Plus, 
-  Upload, 
-  Download, 
-  Eye, 
-  Edit, 
-  Trash2,
+import {
+  FileText,
+  Plus,
+  Upload,
+  Download,
+  Eye,
   Calendar,
   Folder,
   Search,
-  Filter
 } from "lucide-react"
 
 interface MedicalRecord {
@@ -84,7 +81,6 @@ export default function MedicalRecords() {
           'Authorization': `Bearer ${session.access_token}`
         }
       })
-      
       if (response.ok) {
         const data = await response.json()
         setMedicalRecords(data.records || [])
@@ -109,7 +105,6 @@ export default function MedicalRecords() {
 
   const handleAddRecord = async (e: React.FormEvent) => {
     e.preventDefault()
-    
     if (!newRecord.title.trim()) {
       setError("Title is required")
       return
@@ -127,7 +122,6 @@ export default function MedicalRecords() {
       formData.append("title", newRecord.title)
       formData.append("description", newRecord.description)
       formData.append("folder", newRecord.folder)
-      
       newRecord.documents.forEach((file, index) => {
         formData.append(`document${index}`, file)
       })
@@ -162,7 +156,7 @@ export default function MedicalRecords() {
 
   const filteredRecords = medicalRecords.filter(record => {
     const matchesSearch = record.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         (record.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
+      (record.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false)
     const matchesFolder = selectedFolder === "all" || record.folder === selectedFolder
     return matchesSearch && matchesFolder
   })
@@ -187,14 +181,12 @@ export default function MedicalRecords() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar currentRole={currentRole} onRoleSwitch={setCurrentRole} />
-      
       <div className="container mx-auto px-4 py-8">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Medical Records</h1>
             <p className="text-gray-600">Manage and organize your health information</p>
           </div>
-          
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
               <Button>
@@ -209,46 +201,41 @@ export default function MedicalRecords() {
                   Create a new medical record and upload relevant documents
                 </DialogDescription>
               </DialogHeader>
-              
               <form onSubmit={handleAddRecord} className="space-y-4">
                 {error && (
                   <Alert variant="destructive">
                     <AlertDescription>{error}</AlertDescription>
                   </Alert>
                 )}
-                
                 <div className="space-y-2">
                   <Label htmlFor="title">Title *</Label>
                   <Input
                     id="title"
                     value={newRecord.title}
-                    onChange={(e) => setNewRecord({...newRecord, title: e.target.value})}
+                    onChange={(e) => setNewRecord({ ...newRecord, title: e.target.value })}
                     placeholder="e.g., Blood Test Results"
                     required
                   />
                 </div>
-                
                 <div className="space-y-2">
                   <Label htmlFor="description">Description</Label>
                   <Textarea
                     id="description"
                     value={newRecord.description}
-                    onChange={(e) => setNewRecord({...newRecord, description: e.target.value})}
+                    onChange={(e) => setNewRecord({ ...newRecord, description: e.target.value })}
                     placeholder="Additional details about this record"
                     rows={3}
                   />
                 </div>
-                
                 <div className="space-y-2">
                   <Label htmlFor="folder">Folder (Optional)</Label>
                   <Input
                     id="folder"
                     value={newRecord.folder}
-                    onChange={(e) => setNewRecord({...newRecord, folder: e.target.value})}
+                    onChange={(e) => setNewRecord({ ...newRecord, folder: e.target.value })}
                     placeholder="e.g., Lab Results, Prescriptions"
                   />
                 </div>
-                
                 <div className="space-y-2">
                   <Label htmlFor="documents">Documents</Label>
                   <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center">
@@ -279,7 +266,6 @@ export default function MedicalRecords() {
                     )}
                   </div>
                 </div>
-                
                 <div className="flex justify-end space-x-2">
                   <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)}>
                     Cancel
@@ -304,7 +290,6 @@ export default function MedicalRecords() {
               className="pl-10"
             />
           </div>
-          
           <div className="flex gap-2">
             <select
               value={selectedFolder}
@@ -326,7 +311,7 @@ export default function MedicalRecords() {
               <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 mb-2">No medical records found</h3>
               <p className="text-gray-600 mb-4">
-                {searchTerm || selectedFolder !== "all" 
+                {searchTerm || selectedFolder !== "all"
                   ? "Try adjusting your search or filters"
                   : "Start by adding your first medical record"
                 }
@@ -365,7 +350,6 @@ export default function MedicalRecords() {
                       {record.description}
                     </p>
                   )}
-                  
                   {record.documents && record.documents.length > 0 && (
                     <div className="space-y-2">
                       <p className="text-xs font-medium text-gray-700">Documents:</p>
@@ -378,7 +362,6 @@ export default function MedicalRecords() {
                       </div>
                     </div>
                   )}
-                  
                   <div className="flex justify-end space-x-2 mt-4">
                     <Button size="sm" variant="outline">
                       <Eye className="h-3 w-3 mr-1" />

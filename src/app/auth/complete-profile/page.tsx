@@ -13,10 +13,7 @@ import { Progress } from "@/components/ui/progress"
 import { 
   Heart, 
   Calendar,
-  User,
   Phone,
-  Droplets,
-  AlertTriangle,
   Pill,
   CheckCircle,
   ArrowRight

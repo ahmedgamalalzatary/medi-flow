@@ -16,7 +16,6 @@ import { Calendar } from "@/components/ui/calendar"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { 
   Calendar as CalendarIcon,
-  Clock,
   MapPin,
   DollarSign,
   Star,

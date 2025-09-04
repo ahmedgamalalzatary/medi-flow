@@ -10,13 +10,12 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { 
-  Search, 
-  Filter, 
-  MapPin, 
-  Star, 
-  Clock, 
-  DollarSign, 
+import {
+  Search,
+  Filter,
+  MapPin,
+  Star,
+  DollarSign,
   Award,
   Calendar,
   MessageSquare,
@@ -121,9 +120,9 @@ export default function Doctors() {
 
   const filteredDoctors = doctors.filter(doctor => {
     const matchesSearch = doctor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         doctor.bio?.toLowerCase().includes(searchTerm.toLowerCase())
-    
+      doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      doctor.bio?.toLowerCase().includes(searchTerm.toLowerCase())
+
     const matchesSpecialty = !filters.specialty || doctor.specialty === filters.specialty
     const matchesLocation = !filters.location || doctor.location?.toLowerCase().includes(filters.location.toLowerCase())
     const matchesRating = doctor.rating >= filters.minRating
@@ -151,7 +150,7 @@ export default function Doctors() {
   return (
     <div className="min-h-screen bg-gray-50">
       <Navbar currentRole={currentRole} onRoleSwitch={setCurrentRole} />
-      
+
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Find Doctors</h1>
@@ -169,7 +168,7 @@ export default function Doctors() {
               className="pl-10"
             />
           </div>
-          
+
           <Dialog open={isFilterDialogOpen} onOpenChange={setIsFilterDialogOpen}>
             <DialogTrigger asChild>
               <Button variant="outline">
@@ -184,13 +183,13 @@ export default function Doctors() {
                   Narrow down your search with specific criteria
                 </DialogDescription>
               </DialogHeader>
-              
+
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Specialty</label>
                   <select
                     value={filters.specialty}
-                    onChange={(e) => setFilters({...filters, specialty: e.target.value})}
+                    onChange={(e) => setFilters({ ...filters, specialty: e.target.value })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   >
                     <option value="">All Specialties</option>
@@ -199,16 +198,16 @@ export default function Doctors() {
                     ))}
                   </select>
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium mb-2">Location</label>
                   <Input
                     placeholder="City, state, or country"
                     value={filters.location}
-                    onChange={(e) => setFilters({...filters, location: e.target.value})}
+                    onChange={(e) => setFilters({ ...filters, location: e.target.value })}
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     Minimum Rating: {filters.minRating}+ stars
@@ -219,11 +218,11 @@ export default function Doctors() {
                     max="5"
                     step="0.5"
                     value={filters.minRating}
-                    onChange={(e) => setFilters({...filters, minRating: parseFloat(e.target.value)})}
+                    onChange={(e) => setFilters({ ...filters, minRating: parseFloat(e.target.value) })}
                     className="w-full"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium mb-2">
                     Maximum Fee: ${filters.maxFee}
@@ -234,24 +233,24 @@ export default function Doctors() {
                     max="1000"
                     step="50"
                     value={filters.maxFee}
-                    onChange={(e) => setFilters({...filters, maxFee: parseInt(e.target.value)})}
+                    onChange={(e) => setFilters({ ...filters, maxFee: parseInt(e.target.value) })}
                     className="w-full"
                   />
                 </div>
-                
+
                 <div className="flex items-center">
                   <input
                     type="checkbox"
                     id="availability"
                     checked={filters.availability}
-                    onChange={(e) => setFilters({...filters, availability: e.target.checked})}
+                    onChange={(e) => setFilters({ ...filters, availability: e.target.checked })}
                     className="mr-2"
                   />
                   <label htmlFor="availability" className="text-sm">
                     Available now
                   </label>
                 </div>
-                
+
                 <div className="flex justify-end space-x-2">
                   <Button type="button" variant="outline" onClick={() => setIsFilterDialogOpen(false)}>
                     Close
@@ -332,7 +331,7 @@ export default function Doctors() {
                   {doctor.bio && (
                     <p className="text-sm text-gray-600 line-clamp-3">{doctor.bio}</p>
                   )}
-                  
+
                   <div className="space-y-2">
                     <div className="flex items-center text-sm text-gray-600">
                       <MapPin className="h-4 w-4 mr-2" />
@@ -353,18 +352,18 @@ export default function Doctors() {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="flex space-x-2">
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       className="flex-1"
                       onClick={() => handleBookAppointment(doctor.id)}
                     >
                       <Calendar className="h-3 w-3 mr-1" />
                       Book
                     </Button>
-                    <Button 
-                      size="sm" 
+                    <Button
+                      size="sm"
                       variant="outline"
                       onClick={() => setSelectedDoctor(doctor)}
                     >
@@ -410,7 +409,7 @@ export default function Doctors() {
                 </div>
               </div>
             </DialogHeader>
-            
+
             <div className="space-y-6">
               {selectedDoctor.bio && (
                 <div>
@@ -418,7 +417,7 @@ export default function Doctors() {
                   <p className="text-gray-600">{selectedDoctor.bio}</p>
                 </div>
               )}
-              
+
               <div className="grid md:grid-cols-2 gap-4">
                 <div>
                   <h3 className="font-semibold mb-2">Contact Information</h3>
@@ -441,7 +440,7 @@ export default function Doctors() {
                     )}
                   </div>
                 </div>
-                
+
                 <div>
                   <h3 className="font-semibold mb-2">Practice Details</h3>
                   <div className="space-y-2">
@@ -460,7 +459,7 @@ export default function Doctors() {
                   </div>
                 </div>
               </div>
-              
+
               {selectedDoctor.qualifications && selectedDoctor.qualifications.length > 0 && (
                 <div>
                   <h3 className="font-semibold mb-2">Qualifications</h3>
@@ -471,7 +470,7 @@ export default function Doctors() {
                   </div>
                 </div>
               )}
-              
+
               {selectedDoctor.languages && selectedDoctor.languages.length > 0 && (
                 <div>
                   <h3 className="font-semibold mb-2">Languages</h3>
@@ -482,9 +481,9 @@ export default function Doctors() {
                   </div>
                 </div>
               )}
-              
+
               <div className="flex space-x-3 pt-4">
-                <Button 
+                <Button
                   className="flex-1"
                   onClick={() => {
                     setSelectedDoctor(null)
