@@ -30,14 +30,16 @@ export default function CompleteProfile() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
   const [step, setStep] = useState(1)
-  const totalSteps = 2
+  const totalSteps = 3
 
   const [formData, setFormData] = useState({
     dateOfBirth: "",
     gender: "",
     bloodType: "",
     allergies: "",
-    medications: ""
+    medications: "",
+    emergencyContact: "",
+    emergencyPhone: ""
   })
 
   useEffect(() => {
@@ -297,6 +299,45 @@ export default function CompleteProfile() {
                     <p className="text-xs text-gray-500">
                       Include prescription medications, over-the-counter drugs, and supplements
                     </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3: Emergency Contact */}
+            {step === 3 && (
+              <div className="space-y-4">
+                <div className="text-center mb-6">
+                  <Phone className="h-12 w-12 text-blue-600 mx-auto mb-2" />
+                  <h3 className="text-lg font-semibold">Emergency Contact</h3>
+                  <p className="text-gray-600">Someone we can contact in case of emergency</p>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="emergencyContact">Emergency Contact Name *</Label>
+                    <Input
+                      id="emergencyContact"
+                      name="emergencyContact"
+                      type="text"
+                      placeholder="Full name of emergency contact"
+                      value={formData.emergencyContact}
+                      onChange={handleInputChange}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="emergencyPhone">Emergency Contact Phone *</Label>
+                    <Input
+                      id="emergencyPhone"
+                      name="emergencyPhone"
+                      type="tel"
+                      placeholder="Phone number of emergency contact"
+                      value={formData.emergencyPhone}
+                      onChange={handleInputChange}
+                      required
+                    />
                   </div>
                 </div>
               </div>
