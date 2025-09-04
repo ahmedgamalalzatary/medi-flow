@@ -17,14 +17,7 @@ export default function SignUp() {
     email: "",
     password: "",
     confirmPassword: "",
-    phone: "",
-    dateOfBirth: "",
-    gender: "",
-    bloodType: "",
-    allergies: "",
-    medications: "",
-    emergencyContact: "",
-    emergencyPhone: ""
+    phone: ""
   })
   const [showPassword, setShowPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
@@ -61,8 +54,17 @@ export default function SignUp() {
 
     try {
       const result = await signUp(formData.email, formData.password, {
-        ...formData,
-        role: "PATIENT"
+        name: formData.name,
+        phone: formData.phone,
+        role: "PATIENT",
+        // Set medical fields as null - will be completed on first login
+        dateOfBirth: null,
+        gender: null,
+        bloodType: null,
+        allergies: null,
+        medications: null,
+        emergencyContact: null,
+        emergencyPhone: null
       })
 
       if (result.error) {
@@ -113,7 +115,7 @@ export default function SignUp() {
                 </Alert>
               )}
 
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="name">Full Name *</Label>
                   <div className="relative">
@@ -149,7 +151,7 @@ export default function SignUp() {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
+                  <Label htmlFor="phone">Phone Number *</Label>
                   <div className="relative">
                     <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                     <Input
@@ -159,21 +161,7 @@ export default function SignUp() {
                       placeholder="Enter your phone number"
                       value={formData.phone}
                       onChange={handleChange}
-                      className="pl-10"
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="dateOfBirth">Date of Birth</Label>
-                  <div className="relative">
-                    <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="dateOfBirth"
-                      name="dateOfBirth"
-                      type="date"
-                      value={formData.dateOfBirth}
-                      onChange={handleChange}
+                      required
                       className="pl-10"
                     />
                   </div>
@@ -238,77 +226,18 @@ export default function SignUp() {
                     </Button>
                   </div>
                 </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="gender">Gender</Label>
-                  <Input
-                    id="gender"
-                    name="gender"
-                    type="text"
-                    placeholder="Enter your gender"
-                    value={formData.gender}
-                    onChange={handleChange}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="bloodType">Blood Type</Label>
-                  <Input
-                    id="bloodType"
-                    name="bloodType"
-                    type="text"
-                    placeholder="e.g., A+, O-, AB+"
-                    value={formData.bloodType}
-                    onChange={handleChange}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="allergies">Allergies</Label>
-                  <Input
-                    id="allergies"
-                    name="allergies"
-                    type="text"
-                    placeholder="List any allergies"
-                    value={formData.allergies}
-                    onChange={handleChange}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="medications">Current Medications</Label>
-                  <Input
-                    id="medications"
-                    name="medications"
-                    type="text"
-                    placeholder="List current medications"
-                    value={formData.medications}
-                    onChange={handleChange}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="emergencyContact">Emergency Contact</Label>
-                  <Input
-                    id="emergencyContact"
-                    name="emergencyContact"
-                    type="text"
-                    placeholder="Emergency contact name"
-                    value={formData.emergencyContact}
-                    onChange={handleChange}
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="emergencyPhone">Emergency Phone</Label>
-                  <Input
-                    id="emergencyPhone"
-                    name="emergencyPhone"
-                    type="tel"
-                    placeholder="Emergency contact phone"
-                    value={formData.emergencyPhone}
-                    onChange={handleChange}
-                  />
+              </div>
+
+              {/* Info about profile completion */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start">
+                  <Heart className="h-5 w-5 text-blue-600 mt-0.5 mr-3 flex-shrink-0" />
+                  <div>
+                    <h4 className="text-sm font-medium text-blue-900">Complete Your Medical Profile Later</h4>
+                    <p className="text-sm text-blue-700 mt-1">
+                      After creating your account, you'll be guided to complete your medical information including date of birth, blood type, allergies, and emergency contacts on your first login.
+                    </p>
+                  </div>
                 </div>
               </div>
               

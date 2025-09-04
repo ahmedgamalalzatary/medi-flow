@@ -3,6 +3,7 @@
 import { useAuth } from "@/hooks/use-auth"
 import { useRouter } from "next/navigation"
 import { useState, useEffect } from "react"
+import { createClient } from "@/lib/supabase"
 import { Navbar } from "@/components/layout/navbar"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -22,6 +23,7 @@ import {
 export default function Dashboard() {
   const { user, profile, loading: authLoading } = useAuth()
   const router = useRouter()
+  const supabase = createClient()
   const [currentRole, setCurrentRole] = useState<"patient" | "doctor">("patient")
   const [loading, setLoading] = useState(true)
 
@@ -39,9 +41,33 @@ export default function Dashboard() {
         setCurrentRole("doctor")
       } else {
         setCurrentRole("patient")
+        // Check if patient needs to complete profile
+        checkPatientProfileCompletion()
       }
     }
   }, [authLoading, user, profile, router])
+
+  const checkPatientProfileCompletion = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session?.access_token) return
+
+      const response = await fetch("/api/patients/check-profile", {
+        headers: {
+          'Authorization': `Bearer ${session.access_token}`
+        }
+      })
+      
+      if (response.ok) {
+        const data = await response.json()
+        if (!data.isComplete) {
+          router.push("/auth/complete-profile")
+        }
+      }
+    } catch (error) {
+      console.error("Error checking patient profile:", error)
+    }
+  }
 
   const handleRoleSwitch = (role: "patient" | "doctor") => {
     setCurrentRole(role)
