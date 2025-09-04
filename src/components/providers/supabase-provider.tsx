@@ -101,8 +101,8 @@ export function SupabaseProvider({ children }: { children: React.ReactNode }) {
 
   const signUp = async (email: string, password: string, userData: any) => {
     try {
-      // Use the API route for consistent signup handling
-      const response = await fetch('/api/auth/register', {
+      // Use the manual API route to bypass trigger issues
+      const response = await fetch('/api/auth/register-manual', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

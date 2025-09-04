@@ -22,21 +22,31 @@ export async function POST(request: NextRequest) {
       role
     } = body
 
-    console.log("Registration attempt for:", { email, name, role })
+    console.log("Manual registration attempt for:", { email, name, role })
 
     const supabase = createAdminClient()
 
-    // Create user with Supabase Auth using admin client
+    // Step 1: First, temporarily disable the trigger to prevent conflicts
+    try {
+      await supabase.rpc('exec', {
+        sql: 'ALTER TABLE auth.users DISABLE TRIGGER on_auth_user_created;'
+      })
+      console.log("Trigger disabled successfully")
+    } catch (e) {
+      console.log("Could not disable trigger:", e)
+    }
+
+    // Step 2: Create user with admin client
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
       email,
       password,
-      email_confirm: true, // Auto-confirm email for patients
+      email_confirm: true,
     })
 
     if (authError) {
       console.error("Auth error details:", authError)
       return NextResponse.json(
-        { error: "Auth error creating new user", details: authError.message },
+        { error: "Failed to create user account", details: authError.message },
         { status: 400 }
       )
     }
@@ -48,10 +58,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Wait a moment for any triggers to complete
-    await new Promise(resolve => setTimeout(resolve, 500))
+    console.log("User created successfully:", authData.user.id)
 
-    // Create profile manually using admin client
+    // Step 3: Manually create profile
     const { error: profileError } = await supabase
       .from('profiles')
       .insert({
@@ -64,22 +73,15 @@ export async function POST(request: NextRequest) {
 
     if (profileError) {
       console.error("Error creating profile:", profileError)
-      // If profile creation fails, try to update existing profile
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({
-          name,
-          phone,
-          role: role as UserRole
-        })
-        .eq('id', authData.user.id)
-      
-      if (updateError) {
-        console.error("Error updating profile:", updateError)
-      }
+      return NextResponse.json(
+        { error: "Failed to create user profile", details: profileError.message },
+        { status: 500 }
+      )
     }
 
-    // If patient, create patient profile
+    console.log("Profile created successfully")
+
+    // Step 4: If patient, create patient profile
     if (role === 'PATIENT') {
       const { error: patientError } = await supabase
         .from('patients')
@@ -97,10 +99,22 @@ export async function POST(request: NextRequest) {
       if (patientError) {
         console.error("Error creating patient profile:", patientError)
         return NextResponse.json(
-          { error: "Database error saving new user" },
+          { error: "Failed to create patient profile", details: patientError.message },
           { status: 500 }
         )
       }
+
+      console.log("Patient profile created successfully")
+    }
+
+    // Step 5: Re-enable the trigger
+    try {
+      await supabase.rpc('exec', {
+        sql: 'ALTER TABLE auth.users ENABLE TRIGGER on_auth_user_created;'
+      })
+      console.log("Trigger re-enabled successfully")
+    } catch (e) {
+      console.log("Could not re-enable trigger:", e)
     }
 
     return NextResponse.json(

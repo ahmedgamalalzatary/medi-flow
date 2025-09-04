@@ -9,6 +9,14 @@ export function createClient() {
   )
 }
 
+// Server-side Supabase client (for API routes)
+export function createServerClient() {
+  return createSupabaseClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  )
+}
+
 // Admin client with service role key (for server-side admin operations)
 export function createAdminClient() {
   return createSupabaseClient(
